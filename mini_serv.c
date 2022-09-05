@@ -4,115 +4,93 @@
 #include <netdb.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
-#include <stdlib.h>
-#include <stdio.h>
-#include <sys/time.h>
-#include <sys/types.h>
 
-typedef struct client 
+int extract_message(char **buffer, char **message)
 {
-    int id;
-    char msg[100000];
-} t_client;
-
-t_client clients[1024];
-
-int max = 0; 
-next_id = 0;
-
-fd_set active, readyRead, readyWrite;
-char bufRead[110000], bufWrite[110000];
-
-void fatal_error() 
-{
-    write(2, "Fatal error\n", 12);
-    exit(1);
-}
-
-void send_all(int es) 
-{
-    for (int i = 0; i <= max; i++)
-        if (FD_ISSET(i, &readyWrite) && i != es)
-            send(i, bufWrite, strlen(bufWrite), 0);
-}
-
-int main(int argc, char **argv) 
-{
-    if (argc != 2) 
-    {
-        write(2, "Wrong number of arguments\n", 26);
-        exit(1);
-    }
-    int port = atoi(argv[1]);
-
-    bzero(&clients, sizeof(clients));
-    FD_ZERO(&active);
-
-    int serverSock = socket(AF_INET, SOCK_STREAM, 0);
-    if (serverSock < 0)
-        fatal_error();
-
-    max = serverSock;
-    FD_SET(serverSock, &active);
-
-    struct sockaddr_in addr;
-    socklen_t addr_len = sizeof(addr);
-    addr.sin_family = AF_INET;
-    addr.sin_addr.s_addr = htonl(2130706433);
-    addr.sin_port = htons(port);
-
-    if ((bind(serverSock, (const struct sockaddr *)&addr, sizeof(addr))) < 0)
-        fatal_error();
-    if (listen(serverSock, 128) < 0)
-        fatal_error();
-    while (1) 
-    {
-        readyRead = readyWrite = active;
-        if (select(max + 1, &readyRead, &readyWrite, NULL, NULL) < 0)
-            continue ;
-        for (int s = 0; s <= max; s++) 
+	char	*new_buffer;
+	int		i = 0;
+	
+	*message = 0;
+	if (*buffer == 0)
+		return (0);
+	while ((*buffer)[i])
 	{
-            if (FD_ISSET(s, &readyRead) && s == serverSock) 
-	    {
-                int clientSock = accept(serverSock, (struct sockaddr *)&addr, &addr_len);
-                if (clientSock < 0)
-                    continue ;
-                max = (clientSock > max) ? clientSock : max;
-                clients[clientSock].id = next_id++;
-                FD_SET(clientSock, &active);
-                sprintf(bufWrite, "server: client %d just arrived\n", clients[clientSock].id);
-                send_all(clientSock);
-                break ;
-            }
-            if (FD_ISSET(s, &readyRead) && s != serverSock) 
-	    {
-                int res = recv(s, bufRead, 110000, 0);
-		    
-                if (res <= 0) 
+		if ((*buffer)[i] == '\n')
 		{
-                    sprintf(bufWrite, "server: client %d just left\n", clients[s].id);
-                    send_all(s);
-                    FD_CLR(s, &active);
-                    close(s);
-                    break ;
-                }
-                else 
-		{
-                    for (int i = 0, j = strlen(clients[s].msg); i < res; i++, j++) 
-		    {
-                        clients[s].msg[j] = bufRead[i];
-                        if (clients[s].msg[j] == '\n') 
-			{
-                            clients[s].msg[j] = '\0';
-                            sprintf(bufWrite, "client %d: %s\n", clients[s].id, clients[s].msg);
-                            send_all(s);
-                            bzero(&clients[s].msg, strlen(clients[s].msg));
-                            j = -1;
-                        }
-                    }
-                    break;
-                }
-            }
-        }
-    }
+			new_buffer = calloc(1, sizeof(*new_buffer) * (strlen(*buffer + i + 1) + 1));
+			if (new_buffer == 0)
+				return (-1);
+			strcpy(new_buffer, *buffer + i + 1);
+			*message = *buffer;
+			(*message)[i + 1] = 0;
+			*buffer = new_buffer;
+			return (1);
+		}
+		i++;
+	}
+	return (0);
+}
+
+char *string_join(char *buffer, char *add)
+{
+	char	*new_buffer;
+	int		length;
+
+	if (buffer == 0)
+		length = 0;
+	else
+		length = strlen(buffer);
+	new_buffer = malloc(sizeof(*new_buffer) * (length + strlen(add) + 1));
+	if (new_buffer == 0)
+		return (0);
+	new_buffer[0] = 0;
+	if (buffer != 0)
+		strcat(new_buffer, buffer);
+	free(buffer);
+	strcat(new_buffer, add);
+	return (new_buffer);
+}
+
+
+int main() 
+{
+	int sockfd, connfd, len;
+	struct sockaddr_in servaddr, cli; 
+
+	sockfd = socket(AF_INET, SOCK_STREAM, 0); 
+	if (sockfd == -1) 
+	{ 
+		printf("socket creation failed...\n"); 
+		exit(0); 
+	} 
+	else
+		printf("Socket successfully created..\n"); 
+	bzero(&servaddr, sizeof(servaddr)); 
+
+	servaddr.sin_family = AF_INET; 
+	servaddr.sin_addr.s_addr = htonl(2130706433);
+	servaddr.sin_port = htons(8081); 
+  
+	if ((bind(sockfd, (const struct sockaddr *)&servaddr, sizeof(servaddr))) != 0) 
+	{ 
+		printf("socket bind failed...\n"); 
+		exit(0); 
+	} 
+	else
+		printf("Socket successfully binded..\n");
+	
+	if (listen(sockfd, 10) != 0) 
+	{
+		printf("cannot listen\n"); 
+		exit(0); 
+	}
+	len = sizeof(cli);
+	connfd = accept(sockfd, (struct sockaddr *)&cli, &len);
+	if (connfd < 0) 
+	{ 
+        printf("server acccept failed...\n"); 
+        exit(0); 
+    } 
+    else
+        printf("server acccept the client...\n");
 }
