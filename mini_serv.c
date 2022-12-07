@@ -46,18 +46,18 @@ int	main(int argc, char **argv)
 	struct sockaddr_in		addr;
 	socklen_t 				addr_len;
 	fd_set					fds;
+	
+	server_fd = socket(AF_INET, SOCK_STREAM, 0);
+	addr.sin_family = AF_INET;
+	addr.sin_port = htons(port);
+	addr.sin_addr.s_addr = htonl(INADDR_ANY);
+	addr_len = sizeof(addr);
 
 	if (!check_arguments(argc))
 		arguments_error();
 	if ((port = get_port(argv[1])) == -1)
 		fatal_error();
 	printf("port = %d\n", port);
-	server_fd = socket(AF_INET, SOCK_STREAM, 0);
-
-	addr.sin_family = AF_INET;
-	addr.sin_port = htons(port);
-	addr.sin_addr.s_addr = htonl(INADDR_ANY);
-	addr_len = sizeof(addr);
 	if (bind(server_fd, (struct sockaddr *)&addr, addr_len)== -1)
 		fatal_error();
 	if (listen(server_fd, 0) == -1)
