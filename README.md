@@ -5,7 +5,7 @@ mini_serv.c
 # Allowed Functions
 
 ```
-write, close, select, socket, accept, listen, send, recv, bind, strstr, malloc, realloc, free, calloc, bzero, atoi, sprintf, strlen, exit, strcpy, strcat, memset
+write, close, select, socket, accept, listen, send, recv, bind, strstr, malloc, realloc, free, calloc, bzero, atoi, sprintf, strlen, exit, strcpy, strcat and memset
 ```
 
 # Subject Text
@@ -43,3 +43,21 @@ The fd that you will receive will already be set to make 'recv' or 'send' to blo
 ```
 Memory or fd leaks are forbidden
 ```
+
+# Int Main Function
+
+- To help you, you will find the file ```main.c``` with the beginning of a server and maybe some useful functions.
+(Beware this file use forbidden functions or write things that must not be there in your final program)
+
+- You also have a nc executable in the subject folder which only connects to localhost in order to test
+your server.
+
+- Warning our tester is expecting that you send the messages as fast as you can. Don't do un-necessary buffer.
+
+- Evaluation can be a bit longer than usual...
+
+# Hints 
+
+- Hint: you can use nc to test your program
+- Hint: you should use nc to test your program
+- Hint: To test you can use fcntl(fd, F_SETFL, O_NONBLOCK) but use select and NEVER check EAGAIN (man 2 send)
