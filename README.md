@@ -4,9 +4,31 @@ mini_serv.c
 
 # Allowed Functions
 
+<unistd.h>
 ```
-write, close, select, socket, accept, listen, send, recv, bind, strstr, malloc, realloc, free, calloc, bzero, atoi, sprintf, strlen, exit, strcpy, strcat and memset
+write, close and select
 ```
+
+<sys/socket.h>
+```
+socket, accept, listen, send, recv and bind
+```
+
+<string.h>
+```
+strstr, strlen, strcpy, strcat, memset and bzero
+```
+
+<stdlib.h>
+```
+malloc, realloc, free, calloc, atoi and exit
+```
+
+<stdio.h>
+```
+- sprintf
+```
+
 
 # Subject Text
 
