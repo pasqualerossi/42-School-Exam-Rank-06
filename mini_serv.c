@@ -78,8 +78,9 @@ int main(int argc, char **argv)
                     clientSockets[next_id] = clientSocket;
                     next_id++;
 
-                } else {
-
+                } 
+		else 
+		{
                     int bytesRead = recv(socketId, buffer, sizeof(buffer), 0);
 
                     if (bytesRead <= 0) 
