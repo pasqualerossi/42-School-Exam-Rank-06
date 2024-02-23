@@ -62,6 +62,7 @@ int main(int argc, char **argv)
         {
             if (FD_ISSET(socketId, &readySockets)) 
             {
+                bzero(buffer, BUFFER_SIZE);
                 if (socketId == serverSocket) 
                 {
                     int clientSocket = accept(serverSocket, NULL, NULL);
