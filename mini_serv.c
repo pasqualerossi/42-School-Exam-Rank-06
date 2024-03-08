@@ -1,110 +1,109 @@
 #include <string.h>
-#include <stdio.h>
-#include <stdlib.h>
+#include <sys/select.h>
 #include <unistd.h>
+#include <stdlib.h>
 #include <sys/socket.h>
+#include <sys/socket.h>
+#include <stdio.h>
 #include <netinet/in.h>
 
-typedef struct s_client 
-{
+typedef struct client {
+    int fd;
     int id;
-    char msg[1024];
-} t_client;
+} client;
 
-t_client clients[1024];
-fd_set read_set, write_set, current;
-int maxfd, gid = 0;
-char send_buffer[200000], recv_buffer[200040];
-
-void err(char *msg)
-{
-    if (msg)
-        write(2, msg, strlen(msg));
-    else
-        write(2, "Fatal error", 11);
-    write(2, "\n", 1);
+void exit_error(char *str) {
+    write(2, str, strlen(str));
     exit(1);
 }
 
-void send_to_all(int except)
-{ 
-    for (int fd = 0; fd <= maxfd; fd++)
-        if (FD_ISSET(fd, &write_set) && fd != except)
-            if (send(fd, send_buffer, strlen(send_buffer), 0) == -1)
-                err(NULL);
-}
-
-int main(int ac, char **av) 
+int main(int argc, char **argv)
 {
-    if (ac != 2)
-        err("Wrong number of arguments");
-    
-    struct sockaddr_in servaddr;
-    int servfd = socket(AF_INET, SOCK_STREAM, 0);
-    if (servfd == -1) err(NULL);
-    maxfd = servfd;
-    FD_ZERO(&current);
-    FD_SET(servfd, &current);
+    if (argc != 2) {
+        exit_error("Wrong number of arguments\n");
+    }
 
-    bzero(clients, sizeof(clients));
-    bzero(&servaddr, sizeof(servaddr));
+    const int MAX_CLIENTS = 128;
+    const int BUFFER_SIZE = 200000;
+    client clients[MAX_CLIENTS];
+    int next_id = 0;
+    fd_set active_sockets, ready_sockets;
+    char buffer[BUFFER_SIZE];
+    char msg_buffer[BUFFER_SIZE];
+    int server_socket;
 
-    servaddr.sin_family = AF_INET;
-    servaddr.sin_addr.s_addr = htonl(2130706433);
-    servaddr.sin_port = htons(atoi(av[1]));
+    if ((server_socket = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
+        exit_error("Fatal error\n");
+    }
 
-    if (bind(servfd, (const struct sockaddr*)&servaddr, sizeof(servaddr)) == -1 || listen(servfd, 100) == -1)
-        err(NULL);
+    struct sockaddr_in server_address = {0};
+    server_address.sin_family = AF_INET;
+    server_address.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+    server_address.sin_port = htons(atoi(argv[1]));
 
-    while (42) 
-    {
-        read_set = write_set = current;
-        if (select(maxfd + 1, &read_set, &write_set, NULL, NULL) == -1) continue;
+    if (bind(server_socket, (struct sockaddr *)&server_address, sizeof(server_address)) < 0) {
+        exit_error("Fatal error\n");
+    }
 
-        for (int fd = 0; fd <= maxfd; fd++) 
-        {
-            if (FD_ISSET(fd, &read_set)) 
-            {
-                if (fd == servfd) 
-                {
-                    int clientfd = accept(servfd, NULL, NULL);
-                    if (clientfd == -1) continue;
-                    if (clientfd > maxfd) maxfd = clientfd;
-                    clients[clientfd].id = gid++;
-                    FD_SET(clientfd, &current);
-                    sprintf(send_buffer, "server: client %d just arrived\n", clients[clientfd].id);
-                    send_to_all(clientfd);
-                    break;
-                } 
-                else 
-                {
-                    int ret = recv(fd, recv_buffer, sizeof(recv_buffer), 0);
-                    if (ret <= 0) 
-                    {
-                        sprintf(send_buffer, "server: client %d just left\n", clients[fd].id);
-                        send_to_all(fd);
-                        FD_CLR(fd, &current);
-                        close(fd);
-                    } 
-                    else 
-                    {
-                        for (int i = 0, j = strlen(clients[fd].msg); i < ret; i++, j++) 
-                        {
-                            clients[fd].msg[j] = recv_buffer[i];
-                            if (clients[fd].msg[j] == '\n') 
-                            {
-                                clients[fd].msg[j] = '\0';
-                                sprintf(send_buffer, "client %d: %s\n", clients[fd].id, clients[fd].msg);
-                                send_to_all(fd);
-                                bzero(clients[fd].msg, strlen(clients[fd].msg));
-                                j = -1;
-                            }
+    if (listen(server_socket , MAX_CLIENTS) < 0) {
+        exit_error("Fatal error\n");
+    }
+
+    bzero(clients, sizeof(client) * MAX_CLIENTS);
+    FD_ZERO(&active_sockets);
+    FD_SET(server_socket, &active_sockets);
+    int max_socket = server_socket;
+
+    while (42) {
+        ready_sockets = active_sockets;
+        if (select(max_socket + 1, &ready_sockets, NULL, NULL, NULL) < 0) {
+            exit_error("Fatal error\n");
+        }
+        for (int socket_id = 0; socket_id <= max_socket; socket_id++) {
+            if (!FD_ISSET(socket_id, &ready_sockets)) {
+                continue ;
+            }
+            bzero(buffer, BUFFER_SIZE);
+            if (socket_id == server_socket) {
+                int client_socket;
+
+                if ((client_socket = accept(server_socket, NULL, NULL)) < 0) {
+                    exit_error("Fatal error\n");
+                }
+                FD_SET(client_socket, &active_sockets);
+                max_socket = (client_socket > max_socket) ? client_socket : max_socket;
+                clients[client_socket].fd = client_socket;
+                clients[client_socket].id = next_id++;
+                sprintf(buffer, "server: client %d just arrived\n", clients[client_socket].id);
+                for (int i = 0; i < MAX_CLIENTS; i++) {
+                    if (clients[i].fd != 0 && clients[i].fd != client_socket) {
+                        send(clients[i].fd, buffer, strlen(buffer), 0);
+                    }
+                }
+            } else {
+                int bytes_read = recv(socket_id, buffer, sizeof(buffer) - 1, 0);
+
+                if (bytes_read <= 0) {
+                    bzero(msg_buffer, BUFFER_SIZE);
+                    sprintf(msg_buffer, "server: client %d just left\n", clients[socket_id].id);
+                    for (int i = 0; i < MAX_CLIENTS; i++) {
+                        if (clients[i].fd != socket_id && clients[i].fd != 0) {
+                            send(clients[i].fd, msg_buffer, strlen(msg_buffer), 0);
                         }
-                        bzero(clients[fd].msg, strlen(clients[fd].msg));
-                        break;
+                    }
+                    close(socket_id);
+                    FD_CLR(socket_id, &active_sockets);
+                } else {
+                    bzero(msg_buffer, BUFFER_SIZE);
+                    sprintf(msg_buffer, "client %d: %s\n", clients[socket_id].id, buffer);
+                    for (int i = 0; i < MAX_CLIENTS; i++) {
+                        if (clients[i].fd != socket_id) {
+                            send(clients[i].fd, msg_buffer, strlen(msg_buffer), 0);
+                        }
                     }
                 }
             }
         }
     }
+    return 0;
 }
