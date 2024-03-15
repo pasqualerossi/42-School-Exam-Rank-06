@@ -70,5 +70,3 @@ Memory or fd leaks are forbidden
 Practice the exam just like you would in the real exam using this tool - https://github.com/JCluzet/42_EXAM
     }
 }
-
-```
