@@ -1,5 +1,3 @@
-//Passes 42Paris' moulinette
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
