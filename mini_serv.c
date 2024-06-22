@@ -77,7 +77,6 @@ int     main(int ac, char **av)
                     FD_SET(clientfd, &current);
                     sprintf(send_buffer, "server: client %d just arrived\n", clients[clientfd].id);
                     send_to_all(clientfd);
-                    break;
                 }
                 else
                 {
@@ -88,7 +87,6 @@ int     main(int ac, char **av)
                         send_to_all(fd);
                         FD_CLR(fd, &current);
                         close(fd);
-                        break;
                     }
                     else
                     {
@@ -104,9 +102,9 @@ int     main(int ac, char **av)
                                 j = -1;
                             }
                         }
-                        break;
                     }
                 }
+                break;
             }
         }
     }
