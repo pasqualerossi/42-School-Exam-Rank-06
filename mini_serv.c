@@ -8,13 +8,13 @@
 typedef struct s_client
 {
     int     id;
-    char    msg[100000];
+    char    msg[300000];
 }   t_client;
 
 t_client    clients[1024];
 fd_set      read_set, write_set, current;
 int         maxfd = 0, gid = 0;
-char        send_buffer[120000], recv_buffer[120000];
+char        send_buffer[300000], recv_buffer[300000];
 
 void    err(char  *msg)
 {
@@ -87,6 +87,7 @@ int     main(int ac, char **av)
                         send_to_all(fd);
                         FD_CLR(fd, &current);
                         close(fd);
+                        bzero(clients[fd].msg, strlen(clients[fd].msg));
                     }
                     else
                     {
