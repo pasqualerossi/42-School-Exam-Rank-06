@@ -8,7 +8,7 @@
 typedef struct s_client
 {
     int     id;
-    char    msg[300000];
+    char    msg[290000];
 }   t_client;
 
 t_client    clients[1024];
