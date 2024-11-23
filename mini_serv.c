@@ -71,6 +71,7 @@ int     main(int ac, char **av)
                 if (fd == serverfd)
                 {
                     int clientfd = accept(serverfd, (struct sockaddr *)&serveraddr, &len);
+                    
                     if (clientfd == -1) continue;
                     if (clientfd > maxfd) maxfd = clientfd;
                     clients[clientfd].id = gid++;
