@@ -8,13 +8,13 @@
 typedef struct s_client
 {
     int     id;
-    char    msg[290000];
+    char    msg[100000];
 }   t_client;
 
-t_client    clients[1024];
+t_client    clients[2048];
 fd_set      read_set, write_set, current;
 int         maxfd = 0, gid = 0;
-char        send_buffer[300000], recv_buffer[300000];
+char        send_buffer[120000], recv_buffer[120000];
 
 void    err(char  *msg)
 {
@@ -42,7 +42,7 @@ int     main(int ac, char **av)
         err("Wrong number of arguments");
 
     struct sockaddr_in  serveraddr;
-    socklen_t           len;
+    socklen_t len = sizeof(struct sockaddr_in);
     int serverfd = socket(AF_INET, SOCK_STREAM, 0);
     if (serverfd == -1) err(NULL);
     maxfd = serverfd;
@@ -78,6 +78,7 @@ int     main(int ac, char **av)
                     FD_SET(clientfd, &current);
                     sprintf(send_buffer, "server: client %d just arrived\n", clients[clientfd].id);
                     send_to_all(clientfd);
+                    break;
                 }
                 else
                 {
@@ -89,6 +90,7 @@ int     main(int ac, char **av)
                         FD_CLR(fd, &current);
                         close(fd);
                         bzero(clients[fd].msg, strlen(clients[fd].msg));
+                        break;
                     }
                     else
                     {
@@ -106,7 +108,6 @@ int     main(int ac, char **av)
                         }
                     }
                 }
-                break;
             }
         }
     }
